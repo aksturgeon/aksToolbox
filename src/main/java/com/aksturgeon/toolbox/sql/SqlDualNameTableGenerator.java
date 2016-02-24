@@ -69,7 +69,7 @@ public class SqlDualNameTableGenerator {
 
   private void createScriptFile(int subSystem, String dbPlatform, Properties props) {
     String outputFolder = props.getProperty("dashboard.root.output.folder");
-    String outputFileName = outputFolder; // Dashboard.ROOT_OUTPUT_FOLDER;
+    String outputFileName = outputFolder;
 
     switch (subSystem) {
       case Dashboard.CLC_SUBSYSTEM:
@@ -183,7 +183,6 @@ public class SqlDualNameTableGenerator {
                 shortColumn = columnElement.getAttribute("name");
                 if (dbPlatform.equals("db2i") && propertyElement.getAttribute("type").toString().equals("compositeDate")) {
                   longColumn = getLongCompositeDateName(propertyElement.getAttribute("name"), docSqlMap, x);
-                  //System.out.println(longColumn);
                 }
                 sqlType = columnElement.getAttribute("sql-type").toUpperCase();
                 if (sqlType.equals("INTEGER")) {
@@ -227,15 +226,14 @@ public class SqlDualNameTableGenerator {
         if (udx.length() > 0) {
           ddl += udx;
         }
-        ddl += "RENAME TABLE " + longTable.toUpperCase() + " TO SYSTEM NAME " + shortTable + ";";
+        ddl += "RENAME TABLE " + longTable + " TO SYSTEM NAME " + shortTable + ";";
       }
       ddl += "\n\n";
-      // if (dbPlatform.equals("db2i")) {
-      // System.out.println(longTable.toUpperCase() + " FOR SYSTEM NAME " +
-      // shortTable + " script generated.");
-      // } else {
-      // System.out.println(table + " script generated.");
-      // }
+      if (dbPlatform.equals("db2i")) {
+        System.out.println(longTable + " FOR SYSTEM NAME " + shortTable + " script generated.");
+      } else {
+        System.out.println(table + " script generated.");
+      }
     } catch (ParserConfigurationException e) {
       e.printStackTrace();
       System.out.println("Unable do create DocumentBuilder.");
@@ -275,7 +273,9 @@ public class SqlDualNameTableGenerator {
     }
     if (dbPlatform.equals("db2i")) {
       table = sqlClassElement.getAttribute("table");
-      ddl += "CREATE TABLE " + table.toUpperCase() + " (\n" + "  RECID BIGINT GENERATED ALWAYS AS IDENTITY,\n"
+      shortTable = classElement.getAttribute("table");
+      longTable = table.toUpperCase();
+      ddl += "CREATE TABLE " + longTable + " (\n" + "  RECID BIGINT GENERATED ALWAYS AS IDENTITY,\n"
           + "  VERSIONID BIGINT NOT NULL,\n";
     }
   }
@@ -290,7 +290,7 @@ public class SqlDualNameTableGenerator {
       constraints += "\n);\nGO\n";
     }
     if (dbPlatform.equals("db2i")) {
-      constraints = "  CONSTRAINT PK_" + longTable.toUpperCase() + " PRIMARY KEY(RECID)";
+      constraints = "  CONSTRAINT PK_" + longTable + " PRIMARY KEY(RECID)";
       constraints += "\n);\n";
     }
   }
@@ -298,8 +298,8 @@ public class SqlDualNameTableGenerator {
   private void generateUniqueIndex() {
     if (keys.length() > 0) {
       keys = keys.substring(0, keys.length() - 2);
-      udx = "CREATE UNIQUE INDEX UDX_" + longTable.toUpperCase() + " FOR SYSTEM NAME " + shortTable.toUpperCase()
-          + " ON " + longTable.toUpperCase() + "(" + keys + ");\n";
+      udx = "CREATE UNIQUE INDEX UDX_" + longTable + " FOR SYSTEM NAME " + shortTable
+          + " ON " + longTable + "(" + keys + ");\n";
     }
   }
 
