@@ -7,8 +7,9 @@ import java.util.Scanner;
 
 import com.aksturgeon.toolbox.dbDocHelper.DbFieldMapper;
 import com.aksturgeon.toolbox.ormAssembler.OrmAssembler;
+import com.aksturgeon.toolbox.sql.SqlDualNameTableGenerator;
+//import com.aksturgeon.toolbox.sql.SqlTableGenerator;
 import com.aksturgeon.toolbox.sql.SqlViewIndexGenerator;
-import com.aksturgeon.toolbox.sql.SqlTableGenerator;
 
 /**
  * Sets up constants and calls subordinate utility classes.
@@ -23,7 +24,8 @@ public class Dashboard {
   public static final int DB_TYPE_SQLSERVER = 2;
 
   private static void createSqlScripts(Scanner userInput, Properties props, int selectedSubsystem, String dbPlatform) {
-    SqlTableGenerator sqlGenerator = new SqlTableGenerator();
+    //SqlTableGenerator sqlGenerator = new SqlTableGenerator();
+    SqlDualNameTableGenerator sqlGenerator = new SqlDualNameTableGenerator();
     if (selectedSubsystem == 0 || selectedSubsystem == Dashboard.CLC_SUBSYSTEM) {
       String clcSourceFolder = props.getProperty("dashboard.root.clc.folder");
       System.out.println("\nThe root source folder for CLC components is " + clcSourceFolder);
@@ -106,10 +108,7 @@ public class Dashboard {
   private static String getSubsystemText(Properties props, int selectedSubsystem) {
     switch (selectedSubsystem) {
       case 0:
-        return props.getProperty("dashboard.root.clc.folder"); // ROOT_SOURCE_FOLDER
-                                                               // + "/" +
-                                                               // userName +
-                                                               // "_Gias35_Common_DV/Gias_Common";
+        return props.getProperty("dashboard.root.clc.folder");
       case CLC_SUBSYSTEM:
         return "CLC";
       case GLC_SUBSYSTEM:
@@ -191,11 +190,9 @@ public class Dashboard {
   }
 
   private static void createSqlScript(Scanner userInput, Properties props, int selectedSubsystem, String dbPlatform) {
-    // System.out.println(getOrmInputFileLocation(selectedSubsystem));
-    SqlTableGenerator sqlGenerator = new SqlTableGenerator();
+    //SqlTableGenerator sqlGenerator = new SqlTableGenerator();
+    SqlDualNameTableGenerator sqlGenerator = new SqlDualNameTableGenerator();
     if (selectedSubsystem == 0 || selectedSubsystem == Dashboard.CLC_SUBSYSTEM) {
-      // String clcSourceFolder = ROOT_SOURCE_FOLDER + "/" + userName +
-      // "_Gias35_Common_DV/Gias_Common";
       String clcSourceFolder = props.getProperty("dashboard.root.clc.folder");
       System.out.println("\nThe root source folder for CLC components is " + clcSourceFolder);
 
@@ -204,8 +201,6 @@ public class Dashboard {
       System.out.println("SqlGenerator completed for CLC for " + dbPlatform);
     }
     if (selectedSubsystem == 0 || selectedSubsystem == Dashboard.GLC_SUBSYSTEM) {
-      // String glcSourceFolder = ROOT_SOURCE_FOLDER + "/" + userName +
-      // "_Gias35_GroupLic_DV/Gias_GroupLic";
       String glcSourceFolder = props.getProperty("dashboard.root.glc.folder");
       System.out.println("\nThe root source folder for GLC components is " + glcSourceFolder);
 
@@ -214,8 +209,6 @@ public class Dashboard {
       System.out.println("SqlGenerator completed for GLC for " + dbPlatform);
     }
     if (selectedSubsystem == 0 || selectedSubsystem == Dashboard.ILC_SUBSYSTEM) {
-      // String ilcSourceFolder = ROOT_SOURCE_FOLDER + "/" + userName +
-      // "_Gias35_IndvLic_DV/Gias_IndvLic";
       String ilcSourceFolder = props.getProperty("dashboard.root.ilc.folder");
       System.out.println("\nThe root source folder for ILC components is " + ilcSourceFolder);
 
@@ -230,8 +223,6 @@ public class Dashboard {
       String dbPlatform) {
     OrmAssembler ormAssembler = new OrmAssembler();
     if (selectedSubsystem == 0 || selectedSubsystem == Dashboard.CLC_SUBSYSTEM) {
-      // String clcSourceFolder = ROOT_SOURCE_FOLDER + "/" + userName +
-      // "_Gias35_Common_DV/Gias_Common";
       String clcSourceFolder = props.getProperty("dashboard.root.clc.folder");
       System.out.println("\nThe root source folder for CLC components is " + clcSourceFolder);
 
@@ -240,8 +231,6 @@ public class Dashboard {
       System.out.println("OrmAssembler completed for CLC for " + dbPlatform);
     }
     if (selectedSubsystem == 0 || selectedSubsystem == Dashboard.GLC_SUBSYSTEM) {
-      // String glcSourceFolder = ROOT_SOURCE_FOLDER + "/" + userName +
-      // "_Gias35_GroupLic_DV/Gias_GroupLic";
       String glcSourceFolder = props.getProperty("dashboard.root.glc.folder");
       System.out.println("\nThe root source folder for GLC components is " + glcSourceFolder);
 
@@ -250,8 +239,6 @@ public class Dashboard {
       System.out.println("OrmAssembler completed for GLC for " + dbPlatform);
     }
     if (selectedSubsystem == 0 || selectedSubsystem == Dashboard.ILC_SUBSYSTEM) {
-      // String ilcSourceFolder = ROOT_SOURCE_FOLDER + "/" + userName +
-      // "_Gias35_IndvLic_DV/Gias_IndvLic";
       String ilcSourceFolder = props.getProperty("dashboard.root.ilc.folder");
       System.out.println("\nThe root source folder for ILC components is " + ilcSourceFolder);
 

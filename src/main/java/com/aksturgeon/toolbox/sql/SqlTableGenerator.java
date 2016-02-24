@@ -41,15 +41,11 @@ public class SqlTableGenerator {
    * @param subSystem
    * @param dbPlatform
    */
-//  public void generateSql(String sourceFolder, int subSystem, String dbPlatform) {
   public void generateSql(Properties props, int subSystem, String dbPlatform) {
-//    File rootFolder = new File(Dashboard.ROOT_OUTPUT_FOLDER);
-//    if (rootFolder.exists()) {
       switch (subSystem) {
         case Dashboard.CLC_SUBSYSTEM:
           System.out.println("Generating script for clc subsystem...");
           createScriptFile(Dashboard.CLC_SUBSYSTEM, dbPlatform, props);
-//          createScriptFile(props.getProperty("dashboard.root.clc.folder"), dbPlatform);
           System.out.println("Script for clc subsystem complete.");
           break;
         case Dashboard.GLC_SUBSYSTEM:
@@ -63,9 +59,6 @@ public class SqlTableGenerator {
           System.out.println("Script for ilc subsystem complete.");
           break;
       }
-//    } else {
-//      System.out.println("ERROR: " + Dashboard.ROOT_OUTPUT_FOLDER + " not found");
-//    }
   }
 
   private void createScriptFile(int subSystem, String dbPlatform, Properties props) {
@@ -116,20 +109,16 @@ public class SqlTableGenerator {
   }
 
   private void generateSubSystemDDL(String outputFolder, String dbPlatform) {
-    // File xmlFile = new
-    // File("C:/aksToolboxOutput/CLC/AccountControlBase.xml");
     File directory = new File(outputFolder + "/" + dbPlatform);
     File[] fList = directory.listFiles();
-
     for (File xmlFile : fList) {
       createSqlUsingOrm(xmlFile, dbPlatform);
     }
   }
 
   private void createSqlUsingOrm(File xmlFile, String dbPlatform) {
-    // sqlConstraints = sqlKeys = db2Constraints = db2Keys = "";
     constraints = keys = "";
-
+    
     DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
     try {
       DocumentBuilder docBuilder = docBuilderFactory.newDocumentBuilder();
@@ -141,60 +130,10 @@ public class SqlTableGenerator {
       Node classNode = classNodeList.item(0);
       Element classElement = (Element) classNode;
 
-      if (dbPlatform.equals("sqlserver")) {
-        table = classElement.getAttribute("name").substring(0, classElement.getAttribute("name").length() - 4);
-        ddl += "CREATE TABLE " + table + " (\n" + "  RECID BIGINT NOT NULL IDENTITY,\n"
-            + "  VERSIONID BIGINT NOT NULL,\n";
-      }
-      if (dbPlatform.equals("db2i")) {
-        table = classElement.getAttribute("table");
-        ddl += "CREATE TABLE " + table + " (\n" + "  RECID BIGINT GENERATED ALWAYS AS IDENTITY,\n"
-            + "  VERSIONID BIGINT NOT NULL,\n";
-      }
+      beginCreateTableStatement(dbPlatform, classElement);
+      setUniqueKeys(doc);
+      generateConstraints(dbPlatform);
 
-      // Get comma separated list of key fields
-      NodeList keyNodeList = doc.getElementsByTagName("natural-id");
-      if (keyNodeList != null && keyNodeList.getLength() > 0) {
-        for (int i = 0; i < keyNodeList.getLength(); i++) {
-          Node propertyKeyNode = keyNodeList.item(i);
-          if (propertyKeyNode.getNodeType() == Node.ELEMENT_NODE) {
-            if (propertyKeyNode.hasChildNodes()) {
-              NodeList propertyChildNodeList = propertyKeyNode.getChildNodes();
-              for (int x = 0; x < propertyChildNodeList.getLength(); x++) {
-                Node propertyChildNode = propertyChildNodeList.item(x);
-                if (propertyChildNode.getNodeType() == Node.ELEMENT_NODE) {
-                  Element propertyElement = (Element) propertyChildNode;
-                  NodeList columnNodeList = propertyElement.getChildNodes();
-                  for (int y = 0; y < columnNodeList.getLength(); y++) {
-                    Node columnNode = columnNodeList.item(y);
-                    if (columnNode.getNodeType() == Node.ELEMENT_NODE) {
-                      Element columnElement = (Element) columnNode;
-                      keys += columnElement.getAttribute("name") + ", ";
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-
-      if (dbPlatform.equals("sqlserver")) {
-        constraints = "  CONSTRAINT PK_" + table + " PRIMARY KEY(RECID)";
-        if (keys.length() > 0) {
-          keys = keys.substring(0, keys.length() - 2);
-          constraints += ",\n  CONSTRAINT UQ_" + table + " UNIQUE(" + keys + ")";
-        }
-        constraints += "\n);\nGO\n";
-      }
-      if (dbPlatform.equals("db2i")) {
-        constraints = "  CONSTRAINT PK_" + table + " PRIMARY KEY(RECID)";
-        if (keys.length() > 0) {
-          keys = keys.substring(0, keys.length() - 2);
-          constraints += ",\n  CONSTRAINT UQ_" + table + " UNIQUE(" + keys + ")";
-        }
-        constraints += "\n);\n";
-      }
       // Get columns
       NodeList propertyNodeList = doc.getElementsByTagName("property");
       for (int i = 0; i < propertyNodeList.getLength(); i++) {
@@ -231,15 +170,6 @@ public class SqlTableGenerator {
                       sqlType = "TIMESTAMP";
                     }
                   }
-                  // if (column.endsWith("Year")) {
-                  // sqlType = "NUMERIC(4)";
-                  // }
-                  // if (column.endsWith("Month")) {
-                  // sqlType = "NUMERIC(2)";
-                  // }
-                  // if (column.endsWith("Day") && !column.contains("julian")) {
-                  // sqlType = "NUMERIC(2)";
-                  // }
                 }
                 if (keys.contains(column)) {
                   sqlType += " NOT NULL";
@@ -262,5 +192,59 @@ public class SqlTableGenerator {
       System.out.println("Error accessing file.");
     }
     System.out.println(table + " script generated.");
+  }
+
+  private void beginCreateTableStatement(String dbPlatform, Element classElement) {
+    if (dbPlatform.equals("sqlserver")) {
+      table = classElement.getAttribute("name").substring(0, classElement.getAttribute("name").length() - 4);
+      ddl += "CREATE TABLE " + table + " (\n" + "  RECID BIGINT NOT NULL IDENTITY,\n"
+          + "  VERSIONID BIGINT NOT NULL,\n";
+    }
+    if (dbPlatform.equals("db2i")) {
+      table = classElement.getAttribute("table");
+      ddl += "CREATE TABLE " + table + " (\n" + "  RECID BIGINT GENERATED ALWAYS AS IDENTITY,\n"
+          + "  VERSIONID BIGINT NOT NULL,\n";
+    }
+  }
+
+  private void generateConstraints(String dbPlatform) {
+    constraints = "  CONSTRAINT PK_" + table + " PRIMARY KEY(RECID)";
+    keys = keys.substring(0, keys.length() - 2);
+    constraints += ",\n  CONSTRAINT UQ_" + table + " UNIQUE(" + keys + ")";
+
+    if (dbPlatform.equals("sqlserver")) {
+      constraints += "\n);\nGO\n";
+    } else {
+      constraints += "\n);\n";
+    }
+  }
+
+  private void setUniqueKeys(Document doc) {
+    //String uniqueKeys = "";
+    NodeList keyNodeList = doc.getElementsByTagName("natural-id");
+    if (keyNodeList != null && keyNodeList.getLength() > 0) {
+      for (int i = 0; i < keyNodeList.getLength(); i++) {
+        Node propertyKeyNode = keyNodeList.item(i);
+        if (propertyKeyNode.getNodeType() == Node.ELEMENT_NODE) {
+          if (propertyKeyNode.hasChildNodes()) {
+            NodeList propertyChildNodeList = propertyKeyNode.getChildNodes();
+            for (int x = 0; x < propertyChildNodeList.getLength(); x++) {
+              Node propertyChildNode = propertyChildNodeList.item(x);
+              if (propertyChildNode.getNodeType() == Node.ELEMENT_NODE) {
+                Element propertyElement = (Element) propertyChildNode;
+                NodeList columnNodeList = propertyElement.getChildNodes();
+                for (int y = 0; y < columnNodeList.getLength(); y++) {
+                  Node columnNode = columnNodeList.item(y);
+                  if (columnNode.getNodeType() == Node.ELEMENT_NODE) {
+                    Element columnElement = (Element) columnNode;
+                    keys += columnElement.getAttribute("name") + ", ";
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
 }
