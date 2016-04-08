@@ -126,7 +126,6 @@ public class SqlDualNameTableGenerator {
     NodeList sqlClassNodeList = null;
     Node sqlClassNode = null;
     Element sqlClassElement = null;
-    // sqlConstraints = sqlKeys = db2Constraints = db2Keys = "";
     constraints = keys = "";
 
     DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
@@ -171,7 +170,7 @@ public class SqlDualNameTableGenerator {
         Node propertyNode = propertyNodeList.item(i);
         if (propertyNode.getNodeType() == Node.ELEMENT_NODE) {
           Element propertyElement = (Element) propertyNode;
-          longColumn = propertyElement.getAttribute("name");
+          longColumn = propertyElement.getAttribute("name").toUpperCase();
           longColumnType = propertyElement.getAttribute("type");
           if (propertyNode.hasChildNodes()) {
             NodeList columnNodeList = propertyNode.getChildNodes();
@@ -180,7 +179,7 @@ public class SqlDualNameTableGenerator {
               if (columnNode.getNodeType() == Node.ELEMENT_NODE) {
                 Element columnElement = (Element) columnNode;
                 column = columnElement.getAttribute("name");
-                shortColumn = columnElement.getAttribute("name");
+                shortColumn = columnElement.getAttribute("name").toUpperCase();
                 if (dbPlatform.equals("db2i") && propertyElement.getAttribute("type").toString().equals("compositeDate")) {
                   longColumn = getLongCompositeDateName(propertyElement.getAttribute("name"), docSqlMap, x);
                 }
@@ -208,11 +207,18 @@ public class SqlDualNameTableGenerator {
                     }
                   }
                 }
-                if (keys.contains(column)) {
-                  sqlType += " NOT NULL";
+                if (dbPlatform.equals("db2i")) {
+                  if (keys.contains(longColumn.toUpperCase())) {
+                    sqlType += " NOT NULL";
+                  }
+                } else {
+                  if (keys.contains(column)) {
+                    sqlType += " NOT NULL";
+                  }
                 }
                 if (dbPlatform.equals("db2i")) {
                   ddl += "  " + longColumn.toUpperCase() + " FOR COLUMN " + shortColumn + " " + sqlType + ",\n";
+//                  ddl += "  " + longColumn + " FOR COLUMN " + shortColumn + " " + sqlType + ",\n";
                 } else {
                   ddl += "  " + column + " " + sqlType + ",\n";
                 }
@@ -223,20 +229,32 @@ public class SqlDualNameTableGenerator {
       }
       ddl += constraints;
       if (dbPlatform.equals("db2i")) {
+        //ddl += "RENAME TABLE " + longTable + " TO SYSTEM NAME " + shortTable + ";\nCOMMIT;\n";
         if (udx.length() > 0) {
           ddl += udx;
         }
-        ddl += "RENAME TABLE " + longTable + " TO SYSTEM NAME " + shortTable + ";";
       }
-      ddl += "\n\n";
+      ddl += "\n";
       if (dbPlatform.equals("db2i")) {
         System.out.println(longTable + " FOR SYSTEM NAME " + shortTable + " script generated.");
       } else {
         System.out.println(table + " script generated.");
       }
+      table = "";
+      shortTable = "";
+      longTable = "";
+      constraints = "";
+      udx = "";
+      column = "";
+      shortColumn = "";
+      longColumn = "";
+      longColumnType = "";
+      sqlType = "";
+      keys = "";
+      javaType = "";
     } catch (ParserConfigurationException e) {
       e.printStackTrace();
-      System.out.println("Unable do create DocumentBuilder.");
+      System.out.println("Unable to create DocumentBuilder.");
     } catch (SAXException e) {
       e.printStackTrace();
       System.out.println("XML parsing error.");
@@ -275,7 +293,8 @@ public class SqlDualNameTableGenerator {
       table = sqlClassElement.getAttribute("table");
       shortTable = classElement.getAttribute("table");
       longTable = table.toUpperCase();
-      ddl += "CREATE TABLE " + longTable + " (\n" + "  RECID BIGINT GENERATED ALWAYS AS IDENTITY,\n"
+      ddl += "CREATE TABLE " + longTable + " FOR SYSTEM NAME " + shortTable + " (\n"
+          + "  RECID BIGINT GENERATED ALWAYS AS IDENTITY,\n"
           + "  VERSIONID BIGINT NOT NULL,\n";
     }
   }
@@ -296,10 +315,17 @@ public class SqlDualNameTableGenerator {
   }
 
   private void generateUniqueIndex() {
+    String indexName = shortTable;
     if (keys.length() > 0) {
       keys = keys.substring(0, keys.length() - 2);
-      udx = "CREATE UNIQUE INDEX UDX_" + longTable + " FOR SYSTEM NAME " + shortTable
-          + " ON " + longTable + "(" + keys + ");\n";
+      if (shortTable.startsWith("PF")) {
+        indexName = shortTable.substring(2);
+      } else {
+        indexName = shortTable + "1";
+      }
+      udx =  "COMMIT;\nCREATE UNIQUE INDEX " + indexName + " ON " + longTable + "(" + keys + ");\n";
+//      udx = "CREATE UNIQUE INDEX " + indexName + " FOR SYSTEM NAME " + shortTable
+//          + " ON " + longTable + "(" + keys + ");\n";
     }
   }
 

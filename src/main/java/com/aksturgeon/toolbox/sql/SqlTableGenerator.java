@@ -209,9 +209,10 @@ public class SqlTableGenerator {
 
   private void generateConstraints(String dbPlatform) {
     constraints = "  CONSTRAINT PK_" + table + " PRIMARY KEY(RECID)";
-    keys = keys.substring(0, keys.length() - 2);
-    constraints += ",\n  CONSTRAINT UQ_" + table + " UNIQUE(" + keys + ")";
-
+    if (keys.length() > 2) {
+      keys = keys.substring(0, keys.length() - 2);
+      constraints += ",\n  CONSTRAINT UQ_" + table + " UNIQUE(" + keys + ")";
+    }
     if (dbPlatform.equals("sqlserver")) {
       constraints += "\n);\nGO\n";
     } else {
