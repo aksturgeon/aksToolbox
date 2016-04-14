@@ -43,6 +43,7 @@ public class SqlDualNameTableGenerator {
 
   /**
    * Entry point
+   * 
    * @param props
    * @param subSystem
    * @param dbPlatform
@@ -129,19 +130,20 @@ public class SqlDualNameTableGenerator {
     constraints = keys = "";
 
     DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
-    
-    // For db2i we need to open the sqlserver xml file to get the long column names
+
+    // For db2i we need to open the sqlserver xml file to get the long column
+    // names
     File sqlServerXmlFile = null;
     Document docSqlMap = null;
-    if(dbPlatform.equals("db2i")) {
-      sqlServerXmlFile = new File(xmlFile.getPath().toString().replace("db2i","sqlserver"));
+    if (dbPlatform.equals("db2i")) {
+      sqlServerXmlFile = new File(xmlFile.getPath().toString().replace("db2i", "sqlserver"));
     }
-    
+
     try {
       DocumentBuilder docBuilder = docBuilderFactory.newDocumentBuilder();
       Document doc = docBuilder.parse(xmlFile);
       doc.getDocumentElement().normalize();
-      if(dbPlatform.equals("db2i")) {
+      if (dbPlatform.equals("db2i")) {
         docSqlMap = docBuilder.parse(sqlServerXmlFile);
         docSqlMap.getDocumentElement().normalize();
       }
@@ -150,12 +152,11 @@ public class SqlDualNameTableGenerator {
       NodeList classNodeList = doc.getElementsByTagName("class");
       Node classNode = classNodeList.item(0);
       Element classElement = (Element) classNode;
-      if(dbPlatform.equals("db2i")) {
+      if (dbPlatform.equals("db2i")) {
         sqlClassNodeList = docSqlMap.getElementsByTagName("class");
         sqlClassNode = sqlClassNodeList.item(0);
         sqlClassElement = (Element) sqlClassNode;
       }
-      
 
       beginCreateTableStatement(dbPlatform, classElement, sqlClassElement);
       setUniqueKeys(doc, docSqlMap);
@@ -180,7 +181,8 @@ public class SqlDualNameTableGenerator {
                 Element columnElement = (Element) columnNode;
                 column = columnElement.getAttribute("name");
                 shortColumn = columnElement.getAttribute("name").toUpperCase();
-                if (dbPlatform.equals("db2i") && propertyElement.getAttribute("type").toString().equals("compositeDate")) {
+                if (dbPlatform.equals("db2i")
+                    && propertyElement.getAttribute("type").toString().equals("compositeDate")) {
                   longColumn = getLongCompositeDateName(propertyElement.getAttribute("name"), docSqlMap, x);
                 }
                 sqlType = columnElement.getAttribute("sql-type").toUpperCase();
@@ -218,7 +220,8 @@ public class SqlDualNameTableGenerator {
                 }
                 if (dbPlatform.equals("db2i")) {
                   ddl += "  " + longColumn.toUpperCase() + " FOR COLUMN " + shortColumn + " " + sqlType + ",\n";
-//                  ddl += "  " + longColumn + " FOR COLUMN " + shortColumn + " " + sqlType + ",\n";
+                  // ddl += " " + longColumn + " FOR COLUMN " + shortColumn + "
+                  // " + sqlType + ",\n";
                 } else {
                   ddl += "  " + column + " " + sqlType + ",\n";
                 }
@@ -229,7 +232,8 @@ public class SqlDualNameTableGenerator {
       }
       ddl += constraints;
       if (dbPlatform.equals("db2i")) {
-        //ddl += "RENAME TABLE " + longTable + " TO SYSTEM NAME " + shortTable + ";\nCOMMIT;\n";
+        // ddl += "RENAME TABLE " + longTable + " TO SYSTEM NAME " + shortTable
+        // + ";\nCOMMIT;\n";
         if (udx.length() > 0) {
           ddl += udx;
         }
@@ -263,6 +267,10 @@ public class SqlDualNameTableGenerator {
       System.out.println("Error accessing file.");
     }
   }
+  
+  public static String rightPadZeros(String str, int num) {
+    return String.format("%1$-" + num + "s", str).replace(' ', '0');
+  }
 
   private String getLongCompositeDateName(String compositeDateName, Document docSqlMap, int childNodeNumber) {
     String returnColumnName = "";
@@ -282,20 +290,21 @@ public class SqlDualNameTableGenerator {
     }
     return returnColumnName;
   }
-  
+
   private void beginCreateTableStatement(String dbPlatform, Element classElement, Element sqlClassElement) {
     if (dbPlatform.equals("sqlserver")) {
-      table = classElement.getAttribute("table"); //.substring(0, classElement.getAttribute("name").length() - 4);
+      table = classElement.getAttribute("table"); // .substring(0,
+                                                  // classElement.getAttribute("name").length()
+                                                  // - 4);
       ddl += "CREATE TABLE " + table + " (\n" + "  RECID BIGINT NOT NULL IDENTITY,\n"
           + "  VERSIONID BIGINT NOT NULL,\n";
     }
     if (dbPlatform.equals("db2i")) {
       table = sqlClassElement.getAttribute("table");
       shortTable = classElement.getAttribute("table");
-      longTable = table.toUpperCase();
+      longTable = rightPadZeros(table.toUpperCase(), 11);
       ddl += "CREATE TABLE " + longTable + " FOR SYSTEM NAME " + shortTable + " (\n"
-          + "  RECID BIGINT GENERATED ALWAYS AS IDENTITY,\n"
-          + "  VERSIONID BIGINT NOT NULL,\n";
+          + "  RECID BIGINT GENERATED ALWAYS AS IDENTITY,\n" + "  VERSIONID BIGINT NOT NULL,\n";
     }
   }
 
@@ -323,9 +332,10 @@ public class SqlDualNameTableGenerator {
       } else {
         indexName = shortTable + "1";
       }
-      udx =  "COMMIT;\nCREATE UNIQUE INDEX " + indexName + " ON " + longTable + "(" + keys + ");\n";
-//      udx = "CREATE UNIQUE INDEX " + indexName + " FOR SYSTEM NAME " + shortTable
-//          + " ON " + longTable + "(" + keys + ");\n";
+      udx = "COMMIT;\nCREATE UNIQUE INDEX " + indexName + " ON " + longTable + "(" + keys + ");\n";
+      // udx = "CREATE UNIQUE INDEX " + indexName + " FOR SYSTEM NAME " +
+      // shortTable
+      // + " ON " + longTable + "(" + keys + ");\n";
     }
   }
 
@@ -336,7 +346,7 @@ public class SqlDualNameTableGenerator {
     } else {
       keyNodeList = doc.getElementsByTagName("natural-id");
     }
-    //NodeList keyNodeList = doc.getElementsByTagName("natural-id");
+    // NodeList keyNodeList = doc.getElementsByTagName("natural-id");
     if (keyNodeList != null && keyNodeList.getLength() > 0) {
       for (int i = 0; i < keyNodeList.getLength(); i++) {
         Node propertyKeyNode = keyNodeList.item(i);
