@@ -1,5 +1,6 @@
 package com.aksturgeon.toolbox.sql;
 
+import java.awt.List;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -36,10 +37,11 @@ public class SqlDualNameTableGenerator {
   private String column = "";
   private String shortColumn = "";
   private String longColumn = "";
-  private String longColumnType = "";
+//  private String longColumnType = "";
   private String sqlType = "";
   private String keys = "";
   private String javaType = "";
+  private List descKeys = new List();
 
   /**
    * Entry point
@@ -118,6 +120,7 @@ public class SqlDualNameTableGenerator {
   private void generateSubSystemDDL(String outputFolder, String dbPlatform) {
     File directory = new File(outputFolder + "/" + dbPlatform);
     File[] fList = directory.listFiles();
+    populateDescKeys();
     for (File xmlFile : fList) {
       createSqlUsingOrm(xmlFile, dbPlatform);
     }
@@ -172,7 +175,7 @@ public class SqlDualNameTableGenerator {
         if (propertyNode.getNodeType() == Node.ELEMENT_NODE) {
           Element propertyElement = (Element) propertyNode;
           longColumn = propertyElement.getAttribute("name").toUpperCase();
-          longColumnType = propertyElement.getAttribute("type");
+          //longColumnType = propertyElement.getAttribute("type");
           if (propertyNode.hasChildNodes()) {
             NodeList columnNodeList = propertyNode.getChildNodes();
             for (int x = 0; x < columnNodeList.getLength(); x++) {
@@ -219,11 +222,15 @@ public class SqlDualNameTableGenerator {
                   }
                 }
                 if (dbPlatform.equals("db2i")) {
-                  ddl += "  " + longColumn.toUpperCase() + " FOR COLUMN " + shortColumn + " " + sqlType + ",\n";
+                  if (longColumn.toUpperCase().equals(shortColumn.toUpperCase())) {
+                    ddl += "  " + longColumn.toUpperCase() + " " + sqlType + ",\r\n";
+                  } else {
+                  ddl += "  " + longColumn.toUpperCase() + " FOR COLUMN " + shortColumn + " " + sqlType + ",\r\n";
                   // ddl += " " + longColumn + " FOR COLUMN " + shortColumn + "
-                  // " + sqlType + ",\n";
+                  // " + sqlType + ",\r\n";
+                  }
                 } else {
-                  ddl += "  " + column + " " + sqlType + ",\n";
+                  ddl += "  " + column + " " + sqlType + ",\r\n";
                 }
               }
             }
@@ -233,14 +240,18 @@ public class SqlDualNameTableGenerator {
       ddl += constraints;
       if (dbPlatform.equals("db2i")) {
         // ddl += "RENAME TABLE " + longTable + " TO SYSTEM NAME " + shortTable
-        // + ";\nCOMMIT;\n";
+        // + ";\r\nCOMMIT;\r\n";
         if (udx.length() > 0) {
           ddl += udx;
         }
       }
-      ddl += "\n";
+      ddl += "\r\n";
       if (dbPlatform.equals("db2i")) {
-        System.out.println(longTable + " FOR SYSTEM NAME " + shortTable + " script generated.");
+        if(longTable.length() > 10) {
+          System.out.println(longTable + " FOR SYSTEM NAME " + shortTable + " script generated.");
+        } else {
+          System.out.println(longTable + " script generated.");
+        }
       } else {
         System.out.println(table + " script generated.");
       }
@@ -252,7 +263,7 @@ public class SqlDualNameTableGenerator {
       column = "";
       shortColumn = "";
       longColumn = "";
-      longColumnType = "";
+//      longColumnType = "";
       sqlType = "";
       keys = "";
       javaType = "";
@@ -268,8 +279,8 @@ public class SqlDualNameTableGenerator {
     }
   }
   
-  public static String rightPadZeros(String str, int num) {
-    return String.format("%1$-" + num + "s", str).replace(' ', '0');
+  public static String rightPad(String str, int num) {
+    return String.format("%1$-" + num + "s", str).replace(' ', '#');
   }
 
   private String getLongCompositeDateName(String compositeDateName, Document docSqlMap, int childNodeNumber) {
@@ -296,15 +307,20 @@ public class SqlDualNameTableGenerator {
       table = classElement.getAttribute("table"); // .substring(0,
                                                   // classElement.getAttribute("name").length()
                                                   // - 4);
-      ddl += "CREATE TABLE " + table + " (\n" + "  RECID BIGINT NOT NULL IDENTITY,\n"
-          + "  VERSIONID BIGINT NOT NULL,\n";
+      ddl += "CREATE TABLE " + table + " (\r\n" + "  RECID BIGINT NOT NULL IDENTITY,\r\n"
+          + "  VERSIONID BIGINT NOT NULL,\r\n";
     }
     if (dbPlatform.equals("db2i")) {
       table = sqlClassElement.getAttribute("table");
       shortTable = classElement.getAttribute("table");
-      longTable = rightPadZeros(table.toUpperCase(), 11);
-      ddl += "CREATE TABLE " + longTable + " FOR SYSTEM NAME " + shortTable + " (\n"
-          + "  RECID BIGINT GENERATED ALWAYS AS IDENTITY,\n" + "  VERSIONID BIGINT NOT NULL,\n";
+      //longTable = rightPad(table.toUpperCase(), 11);
+      longTable = table.toUpperCase();
+      if (longTable.length() > 10) {
+        ddl += "CREATE TABLE " + longTable + " FOR SYSTEM NAME " + shortTable + " (\r\n";
+      } else {
+        ddl += "CREATE TABLE " + longTable + " (\r\n";
+      }
+      ddl += "  RECID BIGINT GENERATED ALWAYS AS IDENTITY,\r\n" + "  VERSIONID BIGINT NOT NULL,\r\n";
     }
   }
 
@@ -313,30 +329,80 @@ public class SqlDualNameTableGenerator {
       constraints = "  CONSTRAINT PK_" + table + " PRIMARY KEY(RECID)";
       if (keys.length() > 0) {
         keys = keys.substring(0, keys.length() - 2);
-        constraints += ",\n  CONSTRAINT UQ_" + table + " UNIQUE(" + keys + ")";
+        constraints += ",\r\n  CONSTRAINT UQ_" + table + " UNIQUE(" + keys + ")";
       }
-      constraints += "\n);\nGO\n";
+      constraints += "\r\n);\r\nGO\r\n";
     }
     if (dbPlatform.equals("db2i")) {
       constraints = "  CONSTRAINT PK_" + longTable + " PRIMARY KEY(RECID)";
-      constraints += "\n);\n";
+      constraints += "\r\n);\r\n";
     }
   }
 
+//  private void generateUniqueIndex() {
+//    String indexName = longTable;
+//    if (keys.length() > 0) {
+//      keys = keys.substring(0, keys.length() - 2);
+//      if (shortTable.startsWith("PF")) {
+//        //indexName = shortTable.substring(2);
+//        shortTable = shortTable.substring(2);
+//      } else {
+//        //indexName = shortTable + "1";
+//        shortTable = shortTable + "1";
+//      }
+//      //udx = "COMMIT;\r\nCREATE UNIQUE INDEX " + indexName + " ON " + longTable + "(" + keys + ");\r\n";
+//       udx = "CREATE UNIQUE INDEX UDX_" + indexName + " FOR SYSTEM NAME " + shortTable + " ON " + longTable + "(" + keys + ");\r\n";
+//    }
+//  }
+  
   private void generateUniqueIndex() {
-    String indexName = shortTable;
+    String logicalFile = "";
     if (keys.length() > 0) {
-      keys = keys.substring(0, keys.length() - 2);
+      keys = getSortedKeys();
+      //keys = keys.substring(0, keys.length() - 2);
       if (shortTable.startsWith("PF")) {
-        indexName = shortTable.substring(2);
+        logicalFile = shortTable.substring(2);
       } else {
-        indexName = shortTable + "1";
+        logicalFile = shortTable;
       }
-      udx = "COMMIT;\nCREATE UNIQUE INDEX " + indexName + " ON " + longTable + "(" + keys + ");\n";
-      // udx = "CREATE UNIQUE INDEX " + indexName + " FOR SYSTEM NAME " +
-      // shortTable
-      // + " ON " + longTable + "(" + keys + ");\n";
+      if (logicalFile.length() == 10) {
+        logicalFile = logicalFile.substring(0,9) + "1";
+      } else {
+        logicalFile = logicalFile + "1";
+      }
+      if (longTable.length() > 10) {
+        udx = "CREATE UNIQUE INDEX UDX_" + longTable + " FOR SYSTEM NAME " + logicalFile + " ON " + longTable + "(" + keys + ");\r\n";
+      } else {
+        udx = "CREATE UNIQUE INDEX UDX_" + longTable + " ON " + longTable + "(" + keys + ");\r\n";
+      }
     }
+  }
+  
+  private String getSortedKeys() {
+    String unsortedKey = "";
+    String sortedKeys = "";
+    boolean matchFound = false;
+    keys.substring(0, keys.length() - 2);
+    
+    String[] keyList = keys.split(", ");
+    for (String key : keyList) {
+      for (int i = 0; i < descKeys.getItemCount(); i++) {
+        matchFound = false;
+        if (descKeys.getItem(i).equals(longTable + "." + key)) {
+          matchFound = true;
+          break;
+        }
+      }
+      if (sortedKeys.length() == 0) {
+        sortedKeys = key;
+      } else {
+        sortedKeys += ", " + key;
+      }
+      if (matchFound) {
+        sortedKeys += " DESC";
+      }
+    }
+    return sortedKeys.substring(0, keys.length() - 2);
   }
 
   private void setUniqueKeys(Document doc, Document docSqlMap) {
@@ -376,4 +442,53 @@ public class SqlDualNameTableGenerator {
     }
   }
 
+  /**
+   * USE THE FOLLOWING SQL STATEMENT TO GENERATE LOCIC FOR populateDescKeys
+   * SELECT  'descKeys.add("' + LEFT(UPPER(tbl.name)
+   *         + '###########',11) + '.' + UPPER(col.name)
+   *         + '");'
+   * FROM  sys.tables tbl
+   * JOIN  sys.columns col
+   *   ON  col.object_id = tbl.object_id
+   * JOIN  sys.index_columns ic
+   *   ON  ic.object_id = tbl.object_id
+   *   AND ic.column_id = col.column_id
+   * WHERE tbl.type = 'U'
+   *   AND tbl.name NOT LIKE 'QRTZ_%'
+   *   AND ic.is_descending_key = 1
+   * ORDER BY tbl.name, col.column_id
+   */
+  private void populateDescKeys () {
+    descKeys.add("AGENTDRAWRE.TRANSACTIONHISTORYDATEYEAR");
+    descKeys.add("AGENTDRAWRE.TRANSACTIONHISTORYDATEMONTH");
+    descKeys.add("AGENTDRAWRE.TRANSACTIONHISTORYDATEDAY");
+    descKeys.add("AGENTDRAWRE.TRANSACTIONHISTORYTIME");
+    descKeys.add("AGENTDRAWRE.TRANSACTIONHISTORYSEQUNUMB");
+    descKeys.add("AGENTDRAWRE.TRANSACTIONHISTORYSUBSEQUNO");
+    descKeys.add("ROLEHISTORY.TRANSACTIONHISTORYDATEYEAR");
+    descKeys.add("ROLEHISTORY.TRANSACTIONHISTORYDATEMONTH");
+    descKeys.add("ROLEHISTORY.TRANSACTIONHISTORYDATEDAY");
+    descKeys.add("ROLEHISTORY.TRANSACTIONHISTORYTIME");
+    descKeys.add("ROLEHISTORY.TRANSACTIONHISTORYSEQUNUMB");
+    descKeys.add("ROLEHISTORY.TRANSACTIONHISTORYSUBSEQUNO");
+    descKeys.add("SECURITYUSE.TRANSACTIONHISTORYDATEYEAR");
+    descKeys.add("SECURITYUSE.TRANSACTIONHISTORYDATEMONTH");
+    descKeys.add("SECURITYUSE.TRANSACTIONHISTORYDATEDAY");
+    descKeys.add("SECURITYUSE.TRANSACTIONHISTORYTIME");
+    descKeys.add("SECURITYUSE.TRANSACTIONHISTORYSEQUNUMB");
+    descKeys.add("SECURITYUSE.TRANSACTIONHISTORYSUBSEQUNO");
+    descKeys.add("USERAUTHORI.TRANSACTIONHISTORYDATEYEAR");
+    descKeys.add("USERAUTHORI.TRANSACTIONHISTORYDATEMONTH");
+    descKeys.add("USERAUTHORI.TRANSACTIONHISTORYDATEDAY");
+    descKeys.add("USERAUTHORI.TRANSACTIONHISTORYTIME");
+    descKeys.add("USERAUTHORI.TRANSACTIONHISTORYSEQUNUMB");
+    descKeys.add("USERAUTHORI.TRANSACTIONHISTORYSUBSEQUNO");
+    descKeys.add("USERROLEHIS.TRANSACTIONHISTORYDATEYEAR");
+    descKeys.add("USERROLEHIS.TRANSACTIONHISTORYDATEMONTH");
+    descKeys.add("USERROLEHIS.TRANSACTIONHISTORYDATEDAY");
+    descKeys.add("USERROLEHIS.TRANSACTIONHISTORYTIME");
+    descKeys.add("USERROLEHIS.TRANSACTIONHISTORYSEQUNUMB");
+    descKeys.add("USERROLEHIS.TRANSACTIONHISTORYSUBSEQUNO");
+  }
+  
 }
